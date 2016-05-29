@@ -55,6 +55,12 @@ class MethodNotAllowedError(ClientError):
     message = "Method not allowed"
 
 
+class NotFoundError(ClientError):
+    """Error when the requested URL is not found."""
+    code = 404
+    message = "Resource not found"
+
+
 class ServerError(CalmError):
     """The root class for server errors."""
     pass

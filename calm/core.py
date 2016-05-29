@@ -11,7 +11,7 @@ from tornado.web import Application, RequestHandler
 from tornado.web import MissingArgumentError
 
 from calm.ex import (DefinitionError, ServerError, ClientError,
-                     BadRequestError, MethodNotAllowedError)
+                     BadRequestError, MethodNotAllowedError, NotFoundError)
 from calm.codec import CalmJSONEncoder, CalmJSONDecoder, ArgumentParser
 from calm.service import CalmService
 
@@ -62,18 +62,25 @@ class CalmApp(object):
         """Compiles and returns a Tornado Application instance."""
         route_defs = []
 
+        default_handler_args = {
+            'argument_parser': self.config.get('argument_parser',
+                                               ArgumentParser),
+            'app': self
+        }
+
         for uri, methods in self._route_map.items():
             init_params = {
                 **methods,  # noqa
-                'argument_parser': self.config.get('argument_parser',
-                                                   ArgumentParser),
-                'app': self
+                **default_handler_args
             }
+
             route_defs.append(
                 (uri, MainHandler, init_params)
             )
 
-        self._app = Application(route_defs)
+        self._app = Application(route_defs,
+                                default_handler_class=DefaultHandler,
+                                default_handler_args=default_handler_args)
 
         return self._app
 
@@ -350,3 +357,15 @@ class MainHandler(RequestHandler):
 
         self.set_status(500)
         self.write(json.dumps(result))
+
+
+class DefaultHandler(MainHandler):
+    """
+    This class extends the main dispatcher class for request handlers
+    `MainHandler`:
+    It implements prepare method and passed as an default_handler_class for
+    Tornado Application instance
+
+    """
+    def prepare(self):
+        raise NotFoundError()

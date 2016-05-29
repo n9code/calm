@@ -4,7 +4,7 @@ import pytz
 
 from calm.testing import CalmTestCase
 from calm import Application
-from calm.ex import DefinitionError, MethodNotAllowedError
+from calm.ex import DefinitionError, MethodNotAllowedError, NotFoundError
 
 
 app = Application()
@@ -147,6 +147,15 @@ class CoreTests(CalmTestCase):
                       self.get_calm_app().config[
                           'error_key'
                       ]: MethodNotAllowedError.message
+                  })
+
+    def test_url_not_found(self):
+        self.post('/not_found',
+                  expected_code=404,
+                  expected_json_body={
+                      self.get_calm_app().config[
+                          'error_key'
+                      ]: NotFoundError.message
                   })
 
     def test_server_error(self):
