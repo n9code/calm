@@ -183,13 +183,13 @@ class CoreTests(CalmTestCase):
         expected = [args['arg1'], args['arg2']]
 
         self.get('/argtypes',
-                 query_params=args,
+                 query_args=args,
                  expected_code=200,
                  expected_result=expected)
 
         args['arg2'] = "NotANumber"
         self.get('/argtypes',
-                 query_params=args,
+                 query_args=args,
                  expected_code=400)
 
     def test_json_body(self):
