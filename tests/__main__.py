@@ -1,8 +1,12 @@
+import sys
 import nose
 
-nose.main(argv=[
+sys.argv = sys.argv + [
     '-s',
     '-v',
     '--with-coverage',
     '--cover-package=calm',
-])
+    '--cover-erase',
+]
+
+nose.main()

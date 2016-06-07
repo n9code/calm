@@ -52,18 +52,14 @@ class MainHandler(RequestHandler):
 
         super(MainHandler, self).__init__(*args, **kwargs)
 
-    def _get_query_args(self, arg_def):
+    def _get_query_args(self, handler_def):
         """Retreives the values for query arguments."""
         query_args = {}
-        all_query_args = (
-            qarg for qarg, props in arg_def.items() if
-            props['type'] == 'query'
-        )
-        for qarg in all_query_args:
+        for qarg, is_required in handler_def.query_args.items():
             try:
                 query_args[qarg] = self.get_query_argument(qarg)
             except MissingArgumentError:
-                if not arg_def[qarg]['required']:
+                if not is_required:
                     continue
 
                 raise BadRequestError(
@@ -100,8 +96,8 @@ class MainHandler(RequestHandler):
         if not handler_def:
             raise MethodNotAllowedError()
 
-        handler = handler_def['function']
-        kwargs.update(self._get_query_args(handler_def['arguments']))
+        handler = handler_def.handler
+        kwargs.update(self._get_query_args(handler_def))
         self._cast_args(handler, kwargs)
         self._parse_and_update_body()
         if inspect.iscoroutinefunction(handler):

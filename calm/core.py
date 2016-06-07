@@ -3,6 +3,7 @@ Here lies the core of Calm.
 """
 import re
 import inspect
+from inspect import Parameter
 from collections import defaultdict
 
 from tornado.web import Application
@@ -97,79 +98,6 @@ class CalmApp(object):
 
         return uri
 
-    @classmethod
-    def _get_path_params(cls, uri, argspec):
-        """Extract path arguments from the URI."""
-        regex = re.compile(uri)
-        path_params = list(regex.groupindex.keys())
-
-        function, _, required_args, optional_args, has_kwargs = argspec
-
-        result = {}
-        for path_param in path_params:
-            if path_param in optional_args:
-                raise DefinitionError(
-                    "Path asrgument '{}' must not be optional in '{}'".format(
-                        path_param,
-                        function.__name__
-                    )
-                )
-            elif not has_kwargs and path_param not in required_args:
-                raise DefinitionError(
-                    "Path argument '{}' must be expected by '{}'".format(
-                        path_param,
-                        function.__name__
-                    )
-                )
-            else:
-                result[path_param] = {
-                    'type': 'path',
-                    'required': True
-                }
-
-        return result
-
-    @classmethod
-    def _get_query_params(cls, argspec, path_params):
-        """Determine and return query arguments."""
-        _, all_args, required_args, _, _ = argspec
-
-        return {
-            param: {
-                'type': 'query',
-                'required': param in required_args
-            } for param in all_args if param not in path_params
-        }
-
-    @classmethod
-    def _get_function_args(cls, function):
-        """Get function signature in groups."""
-        # TODO: switch to using `inspect.signature()`
-        argspec = inspect.getfullargspec(function)
-        all_args = argspec.args[1:]
-        has_kwargs = argspec.varkw
-        default_count = len(argspec.defaults or [])
-        if default_count:
-            required_args = all_args[:-default_count]
-            optional_args = all_args[-default_count:]
-        else:
-            required_args = all_args
-            optional_args = []
-
-        return function, all_args, required_args, optional_args, has_kwargs
-
-    def _get_request_arguments(self, uri, function):
-        """Get request argument specification."""
-        argspec = self._get_function_args(function)
-        path_params = self._get_path_params(uri, argspec)
-        query_params = self._get_query_params(argspec,
-                                              path_params)
-
-        return {
-            **path_params,
-            **query_params
-        }
-
     def _add_route(self, http_method, function, *uri_fragments):
         """
         Maps a function to a specific URL and HTTP method.
@@ -181,14 +109,7 @@ class CalmApp(object):
                     implementation of the Service notion.
         """
         uri = self._normalize_uri(*uri_fragments)
-        arguments = self._get_request_arguments(uri, function)
-
-        handler_def = {
-            'function': function,
-            'arguments': arguments
-        }
-
-        self._route_map[uri][http_method.lower()] = handler_def
+        self._route_map[uri][http_method.lower()] = HandlerDef(uri, function)
 
     def _decorator(self, http_method, *uri, **kwargs):
         """
@@ -223,3 +144,68 @@ class CalmApp(object):
     def service(self, url):
         """Returns a Service defined by the `url` prefix"""
         return CalmService(self, url)
+
+
+class HandlerDef(object):
+    """
+    Defines a request handler.
+
+    During initialization, the instance will process and store all argument
+    information.
+    """
+    URI_REGEX = re.compile(r':([^\/\?:]*)')
+
+    def __init__(self, uri, handler):
+        super(HandlerDef, self).__init__()
+
+        self.uri = uri
+        self.handler = handler
+        self._signature = inspect.signature(handler)
+        self._params = {
+            k: v for k, v in list(
+                self._signature.parameters.items()
+            )[1:]
+        }
+
+        self.path_args = []
+        self.query_args = {}
+
+        self._extract_arguments()
+
+    def _extract_path_args(self):
+        """Extracts path arguments from the URI."""
+        regex = re.compile(self.uri)
+        self.path_args = list(regex.groupindex.keys())
+
+        for path_arg in self.path_args:
+            if path_arg in self._params:
+                if self._params[path_arg].default is not Parameter.empty:
+                    raise DefinitionError(
+                        "Path argument '{}' must not be optional in '{}'"
+                        .format(
+                            path_arg,
+                            self.handler.__name__
+                        )
+                    )
+            else:
+                raise DefinitionError(
+                    "Path argument '{}' must be expected by '{}'".format(
+                        path_arg,
+                        self.handler.__name__
+                    )
+                )
+
+    def _extract_query_arguments(self):
+        """
+        Extracts query arguments from handler signature
+
+        Should be called after path arguments are extracted.
+        """
+        for _, param in self._params.items():
+            if param.name not in self.path_args:
+                self.query_args[param.name] = param.default is Parameter.empty
+
+    def _extract_arguments(self):
+        """Extracts path and query arguments."""
+        self._extract_path_args()
+        self._extract_query_arguments()
