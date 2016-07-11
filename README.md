@@ -135,6 +135,46 @@ $ curl 'localhost:8888/my_service/args_demo/0?arg1=12&arg2=hello'
 {"type(arg1)": "<class 'int'>", "type(number)": "<class 'int'>", "arg2": "hello"}
 ```
 
+### Adding custom `RequestHandler` implementations
+
+If you have a custom Tornado `RequestHandler` implementation, you can easily add
+them to your Calm application in one of the two ways:
+
+* using the `Application.add_handler` method
+* using the `Application.custom_handler` decorator
+
+For the first option, you can just define the custom handler and manually add it
+to the Calm application, just like you would define a Tornado application:
+
+```python
+class MyHandler(RequestHandler):
+    def get(self):
+        self.write('Hello Custom Handler!')
+
+app.add_handler('/custom_handler', MyHandler)
+```
+
+The second option might look more consistent with other Calm-style definitions:
+
+```python
+@app.custom_handler('/custom_handler')
+class MyHandler(RequestHandler):
+    def get(self):
+        self.write('Hello Custom Handler!')
+```
+
+You can also use the `custom_handler` decorator of services, e.g.:
+
+
+```python
+custom_service = app.service('/custom')
+
+@custom_service.custom_handler('/custom_handler')
+class MyHandler(RequestHandler):
+    def get(self):
+        self.write('Hello Custom Handler!')
+```
+
 ## Contributions
 
 Calm loves Pull Requests and welcomes any contribution be it an issue,
