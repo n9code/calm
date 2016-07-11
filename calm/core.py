@@ -48,6 +48,7 @@ class CalmApp(object):
 
         self._app = None
         self._route_map = defaultdict(dict)
+        self._custom_handlers = []
         self._ws_map = {}
 
     def configure(self, **kwargs):
@@ -78,6 +79,9 @@ class CalmApp(object):
                 (uri, MainHandler, init_params)
             )
 
+        for url_spec in self._custom_handlers:
+            route_defs.append(url_spec)
+
         for uri, handler in self._ws_map.items():
             route_defs.append(
                 (uri, handler)
@@ -88,6 +92,28 @@ class CalmApp(object):
                                 default_handler_args=default_handler_args)
 
         return self._app
+
+    def add_handler(self, *url_spec):
+        """Add a custom `RequestHandler` implementation to the app."""
+        self._custom_handlers.append(url_spec)
+
+    def custom_handler(self, *uri_fragments, init_args=None):
+        """
+        Decorator for custom handlers.
+
+        A custom `RequestHandler` implementation decorated with this decorator
+        will be added to the application uti the specified `uri` and
+        `init_args`.
+        """
+        def wrapper(klass):
+            """Adds the `klass` as a custom handler and returns it back."""
+            self.add_handler(self._normalize_uri(*uri_fragments),
+                             klass,
+                             init_args)
+
+            return klass
+
+        return wrapper
 
     def _normalize_uri(self, *uri_fragments):
         """Convert colon-uri into a regex."""

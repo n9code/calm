@@ -45,3 +45,7 @@ class CalmService(object):
     def delete(self, *url):
         """Extends the DELETE HTTP method decorator."""
         return self._app.delete(self._url, *url)
+
+    def custom_handler(self, *url, init_args=None):
+        """Extends the custom handler addition to support services."""
+        return self._app.custom_handler(self._url, *url, init_args=init_args)
