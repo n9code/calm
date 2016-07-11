@@ -35,7 +35,7 @@ $ pip install calm
 
 Here is a basic usage example of Calm:
 
-```
+```python
 import tornado.ioloop
 from calm import Application
 
@@ -59,8 +59,8 @@ Now go ahead and try your new application! Navigate to
 Now that you built your first Calm RESTful API, let us dive deeper and see more
 features of Calm. Go ahead and add the following code to your first application.
 
-```
-# Calm had the notion of a Service. A Service is nothig more than a URL prefix for
+```python
+# Calm has the notion of a Service. A Service is nothing more than a URL prefix for
 # a group of endpoints.
 my_service = app.service('/my_service')
 
@@ -94,7 +94,7 @@ async def args_demo(request, number: int, arg1: int, arg2='arg2_default'):
 
     Any function parameters that do not appear as path arguments, are
     considered query arguments. If a default value is assigned for a query
-    arguemnt it is considered optional. And finally if not all required query
+    argument it is considered optional. And finally if not all required query
     arguments are passed, `400` HTTP error is returned.
     """
     return {
