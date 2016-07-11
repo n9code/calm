@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytz
+from tornado.web import RequestHandler
 
 from calm.testing import CalmHTTPTestCase
 from calm import Application
@@ -67,6 +68,15 @@ def argument_types(request, arg1, arg2: int):
 @app.post('/json/body')
 def json_body(request):
     return request.body
+
+
+custom_service = app.service('/custom')
+
+
+@custom_service.custom_handler('/handler')
+class MyHandler(RequestHandler):
+    def get(self):
+        self.write("custom result")
 
 
 class CoreTests(CalmHTTPTestCase):
@@ -236,3 +246,8 @@ class CoreTests(CalmHTTPTestCase):
                   })
 
         app.configure(**old_config)
+
+    def test_custom_handler(self):
+        self.get('/custom/handler',
+                 expected_code=200,
+                 expected_body='custom result')
